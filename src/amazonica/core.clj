@@ -1,7 +1,9 @@
 (ns amazonica.core
   "Amazon AWS functions."
   (:use [clojure.algo.generic.functor :only (fmap)])
-  (:require [clojure.string :as str])
+  (:require [clojure.string :as str]
+            [clojure.string :as string]
+            [clojure.java.io :as io])
   (:import clojure.lang.Reflector
            [com.amazonaws
              AmazonServiceException
@@ -1023,18 +1025,20 @@
    derived from the java.lang.reflect.Method(s). Overloaded
    methods will yield a variadic Clojure function."
   [client ns fname methods]
-  (intern ns (with-meta (symbol (name fname))
-               {:amazonica/client client
-                :amazonica/methods methods
-                :arglists (sort (map method-arglist methods))})
-    (fn [& args]
-      (if-let [method (best-method methods args)]
-        (if-not args
-          ((fn-call client method))
-          ((fn-call client method args)))
-        (throw (IllegalArgumentException.
-                 (format "Could not determine best method to invoke for %s using arguments %s"
-                         (name fname) args)))))))
+  (let [source (some-> client pr-str munge (string/replace "." "/") (str ".java") (io/resource) str)]
+    (intern ns (with-meta (symbol (name fname))
+                 (cond-> {:amazonica/client  client
+                          :amazonica/methods methods
+                          :arglists          (sort (map method-arglist methods))}
+                   source (assoc :amazonica/source source)))
+            (fn [& args]
+              (if-let [method (best-method methods args)]
+                (if-not args
+                  ((fn-call client method))
+                  ((fn-call client method args)))
+                (throw (IllegalArgumentException.
+                        (format "Could not determine best method to invoke for %s using arguments %s"
+                                (name fname) args))))))))
 
 (defn- client-methods
   "Returns a map with keys of idiomatic Clojure hyphenated keywords
