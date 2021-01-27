@@ -997,7 +997,9 @@
            name-index {}
            arglist []]
       (if (empty? names)
+        (if (empty? arglist)
         arglist
+          (vec (cons '& arglist)))
         (let [[name & names*] names]
           (if (= (name-frequency name) 1)
             (let [arg-symbol (symbol name)

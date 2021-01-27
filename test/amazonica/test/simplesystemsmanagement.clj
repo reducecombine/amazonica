@@ -1,7 +1,7 @@
 (ns amazonica.test.simplesystemsmanagement
-  (import com.amazonaws.services.simplesystemsmanagement.model.SendCommandRequest)
-  (:use [clojure.test]
-        [amazonica.aws.simplesystemsmanagement]))
+  (:require [clojure.test :refer :all]
+            [amazonica.aws.simplesystemsmanagement :refer :all])
+  (:import (com.amazonaws.services.simplesystemsmanagement.model SendCommandRequest)))
 
 (deftest simplesystemsmanagement []
 
