@@ -1029,6 +1029,7 @@
     (intern ns (with-meta (symbol (name fname))
                  (cond-> {:amazonica/client  client
                           :amazonica/methods methods
+                          :amazonica/method-name (-> methods first .getName)
                           :arglists          (sort (map method-arglist methods))}
                    source (assoc :amazonica/source source)))
             (fn [& args]
