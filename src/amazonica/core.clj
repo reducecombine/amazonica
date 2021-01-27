@@ -3,7 +3,8 @@
   (:use [clojure.algo.generic.functor :only (fmap)])
   (:require [clojure.string :as str]
             [clojure.string :as string]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [clojure.set :as set])
   (:import clojure.lang.Reflector
            [com.amazonaws
              AmazonServiceException
@@ -988,6 +989,22 @@
   `java.lang.reflect.Method`."
   [method]
   (let [names (parameter-names method)
+        type (some-> method .getParameters first .getType)
+        fields (when (class? type)
+                 (try
+                   (->> type
+                        .newInstance
+                        bean
+                        (remove (comp #{:class} first))
+                        (into {})
+                        (keys)
+                        (map (comp camel->keyword2 name))
+                        (map symbol)
+                        ;; fields common to all requests (calculated via `set/intersection`)
+                        (remove '#{clone-source request-credentials-provider request-metric-collector clone-root custom-request-headers sdk-client-execution-timeout request-credentials sdk-request-timeout custom-query-parameters request-client-options read-limit general-progress-listener})
+                        (sort)
+                        (vec))
+                   (catch InstantiationException _)))
         ;; This will help determine when parameter names should be
         ;; suffixed with an index i.e. `parameter-1`. Suffixing is
         ;; necessary when parameter names are synthesized from their
@@ -999,9 +1016,19 @@
            name-index {}
            arglist []]
       (if (empty? names)
-        (if (empty? arglist)
-        arglist
-          (vec (cons '& arglist)))
+        (cond
+          (empty? arglist)
+          arglist
+
+          (= 1 (count arglist))
+          ['& (if fields
+                (assoc {:keys fields} ;; awkward construction for keeping a nice order when querying the arglist interactively (:keys will show up first this way)
+                       :as            arglist)
+                arglist)]
+
+          true
+          arglist)
+
         (let [[name & names*] names]
           (if (= (name-frequency name) 1)
             (let [arg-symbol (symbol name)
@@ -1030,7 +1057,7 @@
                  (cond-> {:amazonica/client  client
                           :amazonica/methods methods
                           :amazonica/method-name (-> methods first .getName)
-                          :arglists          (sort (map method-arglist methods))}
+                          :arglists          (sort-by pr-str (map method-arglist methods))}
                    source (assoc :amazonica/source source)))
             (fn [& args]
               (if-let [method (best-method methods args)]
