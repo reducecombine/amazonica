@@ -999,7 +999,7 @@
                         (into {})
                         (keys)
                         (map (comp camel->keyword2 name))
-                        (map symbol)
+                        (map (comp symbol name))
                         ;; fields common to all requests (calculated via `set/intersection`)
                         (remove '#{clone-source request-credentials-provider request-metric-collector clone-root custom-request-headers sdk-client-execution-timeout request-credentials sdk-request-timeout custom-query-parameters request-client-options read-limit general-progress-listener})
                         (sort)
