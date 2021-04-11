@@ -216,5 +216,7 @@
         (doseq [public-var auto-generated-public-vars
                 :let [{source      :amazonica/source
                        method-name :amazonica/method-name} (meta public-var)]]
-          (is (seq source))
-          (is (seq method-name)))))))
+          (is (string/starts-with? source "jar:file:"))
+          (is (-> source slurp seq)
+              "The referenced file exists")
+          (is (not (string/blank? method-name))))))))
